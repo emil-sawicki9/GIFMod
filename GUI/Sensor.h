@@ -21,7 +21,7 @@ public:
 	int error_structure; //0: normal-additive, 1:lognormal-multiplicative
 	double error_std;
 	double interval;
-	vector<CBTC> output;
+	vector<CBTC> output;  
 
 };
 

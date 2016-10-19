@@ -1683,7 +1683,7 @@ void CMedium::solve_fts_m2(double dt)
 	dt_fail = 10000;
 	ANS = CBTCSet(3*Blocks.size()+3*Connector.size());
 	ANS_colloids = CBTCSet(Blocks.size()*Blocks[0].n_phases);
-	ANS_constituents = CBTCSet(Blocks.size()*(Blocks[0].n_phases+2)*RXN().cons.size());
+	ANS_constituents = CBTCSet(Blocks.size()*(Blocks[0].n_phases+2)*RXN().cons.size()); 
 	if (mass_balance_check()) ANS_MB = CBTCSet(Blocks.size());
 	char buffer[33];
 	epoch_count = 0;
@@ -1692,7 +1692,7 @@ void CMedium::solve_fts_m2(double dt)
 
 	ANS_MB.names.clear();
 
-	mass_balance_check();
+	mass_balance_check(); 
 
 	for (int i=0; i<Blocks.size(); i++)
 		ANS_MB.pushBackName("S_"+Blocks[i].ID);
@@ -1700,13 +1700,12 @@ void CMedium::solve_fts_m2(double dt)
 	double redo_time = t;
 	double redo_dt = 10000;
 	double redo_to_time = t;
-	int in_redo = false;
+	int in_redo = false;  
 	for (int i = 0; i<Blocks.size(); i++) ANS.pushBackName("S_" + Blocks[i].ID);
 	for (int i = 0; i<Connector.size(); i++) ANS.pushBackName("Q_" + Connector[i].ID);
 	for (int i = 0; i<Blocks.size(); i++) ANS.pushBackName("H_" + Blocks[i].ID);
 	for (int i = 0; i<Blocks.size(); i++) ANS.pushBackName("E_" + Blocks[i].ID);
 	for (int i = 0; i<Connector.size(); i++) ANS.pushBackName("A_" + Connector[i].ID);
-
 	for (int i = 0; i<Connector.size(); i++) ANS.pushBackName("Qv_" + Connector[i].ID);
 
 	for (int j=0; j<Blocks[0].Solid_phase.size(); j++) 
@@ -1733,14 +1732,14 @@ void CMedium::solve_fts_m2(double dt)
 	double base_dtt = dt;
 	dt0 = dt;
 	
-	wiggle_dt_mult = 4;
-	max_wiggle_id = -1;
-	pos_def_mult=1;
-	pos_def_mult_Q=1;
+	wiggle_dt_mult = 4; // multiplier for time-step reduction for wiggling
+	max_wiggle_id = -1; // indicator for the result that is oscilating most
+	pos_def_mult=1; //multiplier for time step reduction based on positive-definiteness for particles
+	pos_def_mult_Q=1; //multiplier for time step reduction based on positive-definiteness for water quality
 	t=Timemin; 	
-	J_update = true;
-	J_update_C = true;
-	J_update_Q = true;
+	J_update = true; //indicates  whether the hydro Jacobian needs to be updated
+	J_update_C = true; //indicates  whether the particles Jacobian needs to be updated
+	J_update_Q = true; //indicates  whether the constituents Jacobian needs to be updated
 	cr = 1;
 	int iii=0;
 	int jjj=0;
@@ -1757,27 +1756,26 @@ void CMedium::solve_fts_m2(double dt)
 		fprintf(FILEBTC, "Experiment %s: ", name);
 		fclose(FILEBTC);
 	}
-	setH();      
+	setH(); // Calculates all hydraulic heads in all blocks      
 	if (steady_state_hydro())
 	{
-		string failed_res = create_hydro_steady_matrix_inv();
+		string failed_res = create_hydro_steady_matrix_inv();  //JA: ?
 		if (failed_res != "")
 		{
 			fail_reason = failed_res;
 			return;
 		}
 	}
-	setQ0();     
-	
+	setQ0();     	// JA: from here on we have the Qs at t=0
 
-	vector<CRestoreInfo> Res;
+	vector<CRestoreInfo> Res;  //restores all the information at time t
 	Res.push_back(getrestoreinfo());
 	CRestoreInfo Res_temp;
 
 	double dt_last = dtt;
 	bool restore = true;
 	bool redo = false;
-	int redo_counter = 0;
+	int redo_counter = 0;  // to check if redo count exceeds maximum threshold
 	avg_redo_dtt = dtt;
 	
 	while (t-dtt<Timemax)
@@ -2026,39 +2024,48 @@ void CMedium::solve_fts_m2(double dt)
 
 		if (!redo)
 		{
-		for (int i=0; i<Blocks.size(); i++)
+			for (int i=0; i<Blocks.size(); i++)
 			ANS.BTC[i].append(t,Blocks[i].S);
 
-		for (int i=0; i<Connector.size(); i++)
-			ANS.BTC[i+Blocks.size()].append(t,Connector[i].Q*Connector[i].flow_factor);
+			for (int i=0; i<Connector.size(); i++)
+				ANS.BTC[i+Blocks.size()].append(t,Connector[i].Q*Connector[i].flow_factor);
 
-		for (int i=0; i<Blocks.size(); i++)
-			ANS.BTC[i+Blocks.size()+Connector.size()].append(t,Blocks[i].H);
+			for (int i=0; i<Blocks.size(); i++)
+				ANS.BTC[i+Blocks.size()+Connector.size()].append(t,Blocks[i].H);
 
-		for (int i=0; i<Blocks.size(); i++)
-			ANS.BTC[i+2*Blocks.size()+Connector.size()].append(t,Blocks[i].outflow_corr_factor*Blocks[i].get_evaporation(t));
+			for (int i=0; i<Blocks.size(); i++)
+				ANS.BTC[i+2*Blocks.size()+Connector.size()].append(t,Blocks[i].outflow_corr_factor*Blocks[i].get_evaporation(t));
 
-		for (int i = 0; i<Connector.size(); i++)
-			ANS.BTC[i + 3 * Blocks.size() + Connector.size()].append(t, Connector[i].A);
+			for (int i = 0; i<Connector.size(); i++)
+				ANS.BTC[i + 3 * Blocks.size() + Connector.size()].append(t, Connector[i].A);
 
-		for (int i = 0; i<Connector.size(); i++)
-			ANS.BTC[i + 3 * Blocks.size() + 2*Connector.size()].append(t, Connector[i].Q_v);
+			for (int i = 0; i<Connector.size(); i++)
+				ANS.BTC[i + 3 * Blocks.size() + 2*Connector.size()].append(t, Connector[i].Q_v);
 
-		for (int i=0; i<measured_quan().size(); i++)
-			if (measured_quan()[i].experiment == name)
-				ANS_obs.BTC[i].append(t, get_var(measured_quan()[i].loc_type,measured_quan()[i].id, measured_quan()[i].quan));
+			for (int i=0; i<measured_quan().size(); i++)
+				if (measured_quan()[i].experiment == name)
+					ANS_obs.BTC[i].append(t, get_var(measured_quan()[i].loc_type,measured_quan()[i].id, measured_quan()[i].quan));
 
-		//updating sensors
-		for (int i = 0; i < sensors().size(); i++)
+			//updating sensors
+			for (int i = 0; i < sensors().size(); i++)
 			{
-				if (int(t / sensors()[i].interval) > int((t - dtt) / sensors()[i].interval))
+				//JA:
+				int no_intervals_at_t = int(t / sensors()[i].interval);
+				int no_intervals_at_t_minus_dtt = int((t - dtt) / sensors()[i].interval);			
+				if (no_intervals_at_t > no_intervals_at_t_minus_dtt)  
 				{
-					double t_sensor = int(t / sensors()[i].interval)*sensors()[i].interval;
+					int delta_no_intervals_at_t = no_intervals_at_t - no_intervals_at_t_minus_dtt;
+					double t_sensor = no_intervals_at_t * sensors()[i].interval;
 					double C_1 = calc_term(sensors()[i].loc_type, sensors()[i].id, sensors()[i].quan);
 					double C_2 = calc_term_star(sensors()[i].loc_type, sensors()[i].id, sensors()[i].quan);
-					sensors()[i].append_output(t_sensor, C_1 + (C_2 - C_1) / dtt*(t_sensor - t + dtt), lookup_experiment(name));
+					double t_sensor_previous = sensors()[i].output[lookup_experiment(name)].t[sensors()[i].output[0].n - 1];  
+					for (int no_intervals = 1; no_intervals <= delta_no_intervals_at_t; ++no_intervals)
+					{
+						double t_sensor_for_append = t_sensor_previous + no_intervals*sensors()[i].interval;
+						double C_sensor_for_append = C_1 + (C_2 - C_1) / dtt*(t_sensor_for_append - t + dtt);
+						sensors()[i].append_output(t_sensor_for_append, C_sensor_for_append, lookup_experiment(name));
+					}
 				}
-
 			}
 		}
 
@@ -2066,12 +2073,16 @@ void CMedium::solve_fts_m2(double dt)
 		{
 			if (int(t / controllers()[i].interval) > int((t - dtt) / controllers()[i].interval))
 			{
-				controllers()[i].calc_value(t, dtt, lookup_experiment(name));
+				controllers()[i].calc_value(t, lookup_experiment(name));
 			}
 
 		}
 		
+		/*update_for_actuators();
+		if any_pram.under_control
+			any_pram.updtae(t,controllers()[i].output.C[at t])
 
+		*/
 
 		
 		Solution_dt.BTC[0].append(t,dtt);
