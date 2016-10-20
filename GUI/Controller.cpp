@@ -143,6 +143,6 @@ void CController::get_type_ID() {
 		type_ID = 2;
 	else if (tolower(type) == "pid")
 		type_ID = 3;
-	else if (tolower(type) == "PID_NoOvershoot")
+	else if (tolower(type) == "pid_noovershoot")
 		type_ID = 4;
 }

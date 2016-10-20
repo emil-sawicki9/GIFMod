@@ -2071,6 +2071,7 @@ void CMedium::solve_fts_m2(double dt)
 
 		for (int i = 0; i < controllers().size(); i++)
 		{
+			dtt 
 			if (int(t / controllers()[i].interval) > int((t - dtt) / controllers()[i].interval))
 			{
 				controllers()[i].calc_value(t, lookup_experiment(name));
@@ -2081,6 +2082,8 @@ void CMedium::solve_fts_m2(double dt)
 		/*update_for_actuators();
 		if any_pram.under_control
 			any_pram.updtae(t,controllers()[i].output.C[at t])
+			if Q()[i].controller
+				Q().value = controller[j].output.C[t+dtt]
 
 		*/
 
